@@ -1,0 +1,5 @@
+<launch>
+	<node pkg="golfcart_utilities" type="gps2XY.py" name="gps2XY"  output="screen" /> 
+	<node pkg="golfcart_utilities" type="path_publisher" name="path_publisher" output="screen"/>
+</launch>
+

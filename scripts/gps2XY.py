@@ -8,12 +8,15 @@ import numpy as np
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 from vn300.msg import ins
+# from collections import deque
 
 class gpsUtilities:
     def __init__(self):
 
         self.gps_sub = rospy.Subscriber('/vectornav/ins', ins, self.gps_callback)
         self.pose_pub = rospy.Publisher('/Pose', PoseStamped, queue_size=10)
+        # self.path_pub = rospy.Publisher('/Path', Path, queue_size=10)
+
         self.firstRun = True
         self.global_home = np.array([0, 0, 0])
         self.global_position = np.array([0, 0, 0])
@@ -24,6 +27,7 @@ class gpsUtilities:
         self.initial_bearing = 0
         self.bearing = 0
         self.init_rotn = np.identity(4)
+        # self.pose_list = deque(maxlen=1000)
 
     def gps_to_local(self):
         (easting_home, northing_home, zone_number_home, zone_letter_home) = utm.from_latlon(self.global_home[0], self.global_home[1])
@@ -35,6 +39,7 @@ class gpsUtilities:
         self.local_positionENU = np.array([northing_local, -easting_local, -down_local]);
 
     def gps_callback(self, data):
+    	# path = Path()
         self.global_position = np.array([data.LLA.x, data.LLA.y, data.LLA.z])
 
         if self.firstRun:
@@ -55,10 +60,12 @@ class gpsUtilities:
         trans = tf.transformations.translation_from_matrix(transformation_current)
         quatn = tf.transformations.quaternion_from_matrix(transformation_current)
 
-        self.br.sendTransform((trans[0], trans[1], trans[2]), quatn, data.header.stamp, "base_link", "map")
+        self.br.sendTransform((trans[0], trans[1], trans[2]), quatn, data.header.stamp, "gps_link", "map")
 
         self.pose.header.stamp = data.header.stamp
+        # path.header.stamp = data.header.stamp
         self.pose.header.frame_id = "map"
+        # path.header.frame_id = "map"
         self.pose.pose.position.x = trans[0] #+ sn*self.local_positionENU[1]
         self.pose.pose.position.y = trans[1] #+ cs*self.local_positionENU[1]
         self.pose.pose.position.z = trans[2]
@@ -66,8 +73,10 @@ class gpsUtilities:
         self.pose.pose.orientation.y = quatn[1]
         self.pose.pose.orientation.z = quatn[2]
         self.pose.pose.orientation.w = quatn[3]
+        # self.pose_list.append(self.pose)
+        # path.poses = self.pose_list
         self.pose_pub.publish(self.pose)
-
+        # self.path_pub.publish(path)
         self.firstRun = False
         
 if __name__ == '__main__':
