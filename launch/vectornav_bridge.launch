@@ -1,0 +1,6 @@
+<launch>
+	<node pkg="golfcart_utilities" type="vectornav_bridge.py" name="vectornav_bridge"  output="screen" /> 
+	<node pkg="golfcart_utilities" type="path_publisher" name="path_publisher" output="screen"/>
+	<node pkg="golfcart_utilities" type="motion_estimator.py" name="motion_estimator" output="screen"/>
+</launch>
+

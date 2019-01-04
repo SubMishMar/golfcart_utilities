@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-# license removed for brevity
 import rospy
 import tf
 import utm
 import math
 import numpy as np
 from geometry_msgs.msg import PoseStamped
+from sensor_msgs.msg import PointCloud2
 from nav_msgs.msg import Path
 from vn300.msg import ins
 # from collections import deque
@@ -14,8 +13,9 @@ class gpsUtilities:
     def __init__(self):
 
         self.gps_sub = rospy.Subscriber('/vectornav/ins', ins, self.gps_callback)
+        self.pcd_sub = rospy.Subscriber('/velodyne_points', PointCloud2, self.pcd_callback)
         self.pose_pub = rospy.Publisher('/Pose', PoseStamped, queue_size=10)
-
+        self.pcd_pub = rospy.Publisher('/PointCloud2', PointCloud2, queue_size=10)
         self.firstRun = True
         self.global_home = np.array([0, 0, 0])
         self.global_position = np.array([0, 0, 0])
@@ -24,6 +24,7 @@ class gpsUtilities:
         self.brGPS = tf.TransformBroadcaster()
         self.brLIDAR = tf.TransformBroadcaster()
         self.pose = PoseStamped()
+        self.pcd_out = PointCloud2()
         self.initial_bearing = 0
         self.bearing = 0
         self.init_rotn = np.identity(4)
@@ -50,7 +51,7 @@ class gpsUtilities:
         transformation_init = tf.transformations.quaternion_matrix(quatn_init)
 
         self.gps_to_local()
-        self.local_positionENU[2] = 0
+        # self.local_positionENU[2] = 0
         transformation_ = tf.transformations.translation_matrix(self.local_positionENU)
         self.bearing = (-data.RPY.z) * math.pi/180; 
         quatn_ = tf.transformations.quaternion_from_euler(0, 0, self.bearing)
@@ -61,8 +62,8 @@ class gpsUtilities:
         quatn = tf.transformations.quaternion_from_matrix(transformation_current)
 
         self.brGPS.sendTransform((trans[0], trans[1], trans[2]), quatn, data.header.stamp, "/gps_link", "/map")
-        quatn_NED = tf.transformations.quaternion_from_euler(math.pi, 0, 0)
-        self.brGPS.sendTransform((0, 0, 0), quatn_NED, data.header.stamp, "/imu_link", "/gps_link")
+        quatn_ENU = tf.transformations.quaternion_from_euler(0, 0, 0)
+        self.brGPS.sendTransform((0, 0, 0), quatn_ENU, data.header.stamp, "/imu_link", "/gps_link")
         try:
         	(trans_imu_lidar, rot_imu_lidar) = self.listener.lookupTransform('/vectornav', '/velodyne', rospy.Time(0))
 
@@ -82,7 +83,11 @@ class gpsUtilities:
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
         	print('Cannot lookupTransform')
   
-        
+    def pcd_callback(self, data):
+    	self.pcd_out = data
+    	self.pcd_out.header.frame_id = "lidar_link"
+    	self.pcd_pub.publish(self.pcd_out)
+
 if __name__ == '__main__':
     rospy.init_node('gps2XY', anonymous=True)
     gpsUtls = gpsUtilities()
