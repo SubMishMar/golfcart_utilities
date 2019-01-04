@@ -19,7 +19,7 @@ class gpsUtilities:
         self.pcd_sub = rospy.Subscriber('/velodyne_points', PointCloud2, self.pcd_callback)
         self.pose_pub = rospy.Publisher('/Pose', PoseStamped, queue_size=10)
         self.odom_pub = rospy.Publisher('/Odom', Odometry, queue_size=10)
-        self.pcd_pub = rospy.Publisher('/PointCloud2', PointCloud2, queue_size=10)
+        self.pcd_pub = rospy.Publisher('/PointCloud2', PointCloud2, queue_size=1)
 
         self.firstRun = True
         self.global_home = np.array([0, 0, 0])
